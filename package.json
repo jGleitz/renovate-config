@@ -1,0 +1,23 @@
+{
+  "name": "renovate-config",
+  "version": "1.0.0",
+  "description": "Renovate configuration for Joshua Gleitze’s open source projects.",
+  "main": "default.json5",
+  "scripts": {
+    "format": "prettier --write .",
+    "lint": "prettier --check .",
+    "validate": "renovate-config-validator --strict default.json5 renovate.json5",
+    "test": "npm-run-all --parallel lint validate"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jGleitz/renovate-config.git"
+  },
+  "author": "Joshua Gleitze",
+  "license": "MIT",
+  "devDependencies": {
+    "npm-run-all2": "^7.0.2",
+    "prettier": "^3.5.3",
+    "renovate": "^39.230.1"
+  }
+}
