@@ -1,0 +1,26 @@
+{
+  $schema: "https://docs.renovatebot.com/renovate-schema.json",
+  extends: ["config:recommended"],
+  rebaseWhen: "behind-base-branch",
+  rangeStrategy: "pin",
+  lockFileMaintenance: {
+    enabled: true,
+  },
+  packageRules: [
+    {
+      // the engine requirement should match what is tested in CI. It shouldn’t be updated automatically.
+      matchDepTypes: ["engines"],
+      enabled: false,
+    },
+    {
+      matchUpdateTypes: [
+        "minor",
+        "patch",
+        "pin",
+        "digest",
+        "lockFileMaintenance",
+      ],
+      automerge: true,
+    },
+  ],
+}
