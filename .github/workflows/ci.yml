@@ -12,17 +12,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v5
-      - name: Cache
-        uses: actions/cache@v4
-        with:
-          path: ~/.npm
-          key: ${{ runner.os }}-nodejs-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-nodejs
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: lts/*
+          node-version-file: .nvmrc
+          cache: npm
       - name: Prepare
         run: npm ci
       - name: Check
