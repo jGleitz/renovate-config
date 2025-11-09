@@ -22,5 +22,10 @@
       ],
       automerge: true,
     },
+    {
+      matchPackageNames: ["renovatebot/renovate"],
+      matchUpdateTypes: ["minor", "patch"],
+      schedule: ["* 4-10 * * 5"],
+    },
   ],
 }
