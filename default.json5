@@ -13,6 +13,11 @@
       enabled: false,
     },
     {
+      // peerDependencies should *not* be pinned. They are ranges to allow the widest possible compatibility.
+      matchDepTypes: ["peerDependencies"],
+      rangeStrategy: "widen",
+    },
+    {
       matchUpdateTypes: [
         "minor",
         "patch",
