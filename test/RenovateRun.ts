@@ -1,7 +1,7 @@
 import childProcess from "node:child_process"
 import path from "node:path"
 import fs from "node:fs/promises"
-import type { PackageFile, PackageDependency } from "renovate/dist/modules/manager/types.js"
+import type { PackageDependency, PackageFile } from "renovate/dist/modules/manager/types.js"
 
 export class RenovateRun {
   private errorOutput: string = ""
