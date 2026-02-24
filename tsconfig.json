@@ -10,7 +10,8 @@
     "noPropertyAccessFromIndexSignature": true,
     "noUncheckedIndexedAccess": true,
     "noEmit": true,
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    "skipLibCheck": true
   },
   "include": ["test/**/*.ts", "vitest.config.ts"],
   "exclude": ["node_modules"]
