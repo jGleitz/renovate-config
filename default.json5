@@ -18,19 +18,23 @@
       rangeStrategy: "widen",
     },
     {
-      matchUpdateTypes: [
-        "minor",
-        "patch",
-        "pin",
-        "digest",
-        "lockFileMaintenance",
-      ],
+      matchUpdateTypes: ["minor", "patch", "pin", "digest", "lockFileMaintenance"],
       automerge: true,
     },
     {
       matchPackageNames: ["renovatebot/renovate"],
       matchUpdateTypes: ["minor", "patch"],
       schedule: ["* 4-10 * * 5"],
+    },
+  ],
+  customManagers: [
+    {
+      customType: "regex",
+      managerFilePatterns: ["**/.sdkmanrc"],
+      matchStrings: ["java\s*=\s*(?<currentValue>[\\d.]+)"],
+      extractVersionTemplate: "^(?<version>[^+]+)",
+      datasourceTemplate: "java-version",
+      depNameTemplate: "java",
     },
   ],
 }
