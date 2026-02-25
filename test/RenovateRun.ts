@@ -119,7 +119,7 @@ export class RenovateRun {
         .filter((entry) => "loggerErrors" in entry)
         .flatMap(({ loggerErrors }) => loggerErrors) ?? []
 
-    if (loggerErrors.length > 1) {
+    if (loggerErrors.length > 0) {
       message += " :\n"
       message += buildList(loggerErrors.map(RenovateRun.formatLogEntry))
     } else if (this.errorOutput) {
