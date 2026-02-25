@@ -1,2 +1,9 @@
 onlyBuiltDependencies:
   - re2
+
+ignoredBuiltDependencies:
+  - better-sqlite3
+  - core-js-pure
+  - dtrace-provider
+  - protobufjs
+  - esbuild
