@@ -47,7 +47,7 @@ export class RenovateRun {
       (entry) => entry.msg === "packageFiles with updates" && "config" in entry,
     )?.config
     if (packageFilesByDatasource === undefined) {
-      throw new Error(this.withLogLines("Renovate did not print the loocked up package files!"))
+      throw new Error(this.withLogLines("Renovate did not print the looked up package files!"))
     }
     return dependenciesWithPackageFile<PackageFileWithUpdates, PackageDependencyWithUpdates>(
       packageFilesByDatasource,
