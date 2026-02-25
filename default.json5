@@ -32,7 +32,7 @@
     {
       customType: "regex",
       managerFilePatterns: ["**/.sdkmanrc"],
-      matchStrings: ["java\s*=\s*(?<currentValue>[\\d.]+)"],
+      matchStrings: ["java\\s*=\\s*(?<currentValue>[\\d.]+)"],
       extractVersionTemplate: "^(?<version>[^+]+)",
       datasourceTemplate: "java-version",
       depNameTemplate: "java",
