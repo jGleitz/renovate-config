@@ -65,6 +65,7 @@ export class RenovateRun {
         stdio: ["ignore", "pipe", "pipe"],
         cwd: this.projectDir,
         env: {
+          ...process.env,
           LOG_LEVEL: "debug",
           LOG_FORMAT: "json",
         },
