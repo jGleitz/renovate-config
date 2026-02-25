@@ -3,11 +3,14 @@
   "version": "1.0.0",
   "description": "Renovate configuration for Joshua Gleitze’s open source projects.",
   "main": "default.json5",
+  "type": "module",
   "scripts": {
+    "compile": "tsc",
     "format": "prettier --write .",
     "lint": "prettier --check .",
     "validate": "renovate-config-validator --strict default.json5 renovate.json5",
-    "test": "npm-run-all --parallel lint validate"
+    "test": "vitest run",
+    "check": "npm-run-all --parallel lint validate compile --sequential test"
   },
   "repository": {
     "type": "git",
@@ -16,9 +19,13 @@
   "author": "Joshua Gleitze",
   "license": "MIT",
   "devDependencies": {
+    "@types/which": "3.0.4",
     "npm-run-all2": "8.0.4",
     "prettier": "3.8.1",
-    "renovate": "43.29.2"
+    "renovate": "43.29.2",
+    "typescript": "5.9.3",
+    "vitest": "4.0.18",
+    "which": "6.0.1"
   },
   "packageManager": "pnpm@10.30.1+sha512.3590e550d5384caa39bd5c7c739f72270234b2f6059e13018f975c313b1eb9fefcc09714048765d4d9efe961382c312e624572c0420762bdc5d5940cdf9be73a"
 }

@@ -22,4 +22,4 @@ jobs:
       - name: Install Dependencies
         run: pnpm install --frozen-lockfile
       - name: Check
-        run: pnpm test
+        run: pnpm check
