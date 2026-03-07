@@ -41,16 +41,16 @@ export class RenovateRun {
   ): this {
     const customName = `${builtinDatasource}-override`
     const versionsDir = path.join(this.projectDir, `${customName}-versions`)
-    for (const [packageName, versions] of Object.entries(packageVersions)) {
-      this.preExecute.push(async () => {
-        await fs.mkdir(versionsDir, { recursive: true })
+    this.preExecute.push(async () => {
+      await fs.mkdir(versionsDir, { recursive: true })
+      for (const [packageName, versions] of Object.entries(packageVersions)) {
         await fs.writeFile(
           path.join(versionsDir, `${packageName}.txt`),
           versions.join("\n"),
           "utf-8",
         )
-      })
-    }
+      }
+    })
     this.customDatasourceDefinitions[customName] = {
       defaultRegistryUrlTemplate: `file://${versionsDir}/{{packageName}}.txt`,
       format: "plain",
