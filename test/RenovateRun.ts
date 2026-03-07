@@ -1,7 +1,11 @@
 import childProcess from "node:child_process"
+import { promisify } from "node:util"
 import path from "node:path"
 import fs from "node:fs/promises"
 import type { PackageDependency, PackageFile } from "renovate/dist/modules/manager/types.js"
+import type { BranchConfig } from "renovate/dist/workers/types.js"
+
+const exec = promisify(childProcess.exec)
 
 export class RenovateRun {
   private errorOutput: string = ""
@@ -9,6 +13,10 @@ export class RenovateRun {
   private readonly args: string[] = ["--platform=local"]
   private readonly parseErrors: string[] = []
   private readonly logEntries: RenovateLogEntry[] = []
+  private readonly customDatasourceDefinitions: Record<
+    string,
+    { defaultRegistryUrlTemplate: string; format: string }
+  > = {}
 
   constructor(
     private readonly nodeJsPath: string,
@@ -20,13 +28,47 @@ export class RenovateRun {
     this.preExecute.push(async () => {
       await fs.writeFile(versionsFile, versions.join("\n"), "utf-8")
     })
-    const customDatasources = {
-      [name]: {
-        defaultRegistryUrlTemplate: `file://${versionsFile}`,
-        format: "plain",
-      },
+    this.customDatasourceDefinitions[name] = {
+      defaultRegistryUrlTemplate: `file://${versionsFile}`,
+      format: "plain",
     }
-    this.args.push(`--custom-datasources=${JSON.stringify(customDatasources)}`)
+    return this
+  }
+
+  withOverriddenDatasource(
+    builtinDatasource: string,
+    packageVersions: Record<string, string[]>,
+  ): this {
+    const customName = `${builtinDatasource}-override`
+    const versionsDir = path.join(this.projectDir, `${customName}-versions`)
+    this.preExecute.push(async () => {
+      await fs.mkdir(versionsDir, { recursive: true })
+      for (const [packageName, versions] of Object.entries(packageVersions)) {
+        await fs.writeFile(
+          path.join(versionsDir, `${packageName}.txt`),
+          versions.join("\n"),
+          "utf-8",
+        )
+      }
+    })
+    this.customDatasourceDefinitions[customName] = {
+      defaultRegistryUrlTemplate: `file://${versionsDir}/{{packageName}}.txt`,
+      format: "plain",
+    }
+    this.preExecute.push(async () => {
+      const configPath = path.join(this.projectDir, "renovate.json5")
+      const config = await fs.readFile(configPath, "utf-8")
+      const insertionTarget = "  ],\n  customManagers:"
+      const newRule = [
+        `    {`,
+        `      matchDatasources: ["${builtinDatasource}"],`,
+        `      registryUrls: ["file://${versionsDir}/{{packageName}}.txt"],`,
+        `      overrideDatasource: "custom.${customName}",`,
+        `    },`,
+        ``,
+      ].join("\n")
+      await fs.writeFile(configPath, config.replace(insertionTarget, newRule + insertionTarget))
+    })
     return this
   }
 
@@ -54,23 +96,64 @@ export class RenovateRun {
     )
   }
 
-  private async execute(...additionalArgs: string[]): Promise<void> {
-    await Promise.all(this.preExecute.map((fn) => fn()))
-
-    const renovateIndexJs = path.join(process.cwd(), "node_modules", "renovate", "dist", "renovate")
-    const renovateProcess = childProcess.spawn(
-      this.nodeJsPath,
-      [renovateIndexJs, ...this.args, ...additionalArgs],
-      {
-        stdio: ["ignore", "pipe", "pipe"],
+  withGitRepo(): this {
+    this.preExecute.push(async () => {
+      await exec("git init && git add -A && git commit -m 'fix: initial commit'", {
         cwd: this.projectDir,
         env: {
           ...process.env,
-          LOG_LEVEL: "debug",
-          LOG_FORMAT: "json",
+          GIT_AUTHOR_NAME: "test",
+          GIT_AUTHOR_EMAIL: "test@test.com",
+          GIT_COMMITTER_NAME: "test",
+          GIT_COMMITTER_EMAIL: "test@test.com",
         },
-      },
+      }).catch((error: childProcess.ExecException & { stdout: string; stderr: string }) => {
+        throw new Error(
+          `Failed to initialize git repo (exit code ${error.code}):\n` +
+            `stdout: ${error.stdout}\nstderr: ${error.stderr}`,
+        )
+      })
+    })
+    return this
+  }
+
+  withSemanticCommits(): this {
+    this.args.push("--semantic-commits=enabled")
+    return this
+  }
+
+  async branches(): Promise<BranchConfig[]> {
+    await this.execute("--dry-run=full")
+    const branchesInfo = this.logEntries.find(
+      (entry): entry is BranchesInfoRenovateLogEntry =>
+        entry.msg === "branches info extended" && "branchesInformation" in entry,
     )
+    if (branchesInfo === undefined) {
+      throw new Error(this.withLogLines("Renovate did not print the branches information!"))
+    }
+    return branchesInfo.branchesInformation
+  }
+
+  private async execute(...additionalArgs: string[]): Promise<void> {
+    for (const fn of this.preExecute) {
+      await fn()
+    }
+
+    const args = [...this.args, ...additionalArgs]
+    if (Object.keys(this.customDatasourceDefinitions).length > 0) {
+      args.push(`--custom-datasources=${JSON.stringify(this.customDatasourceDefinitions)}`)
+    }
+
+    const renovateIndexJs = path.join(process.cwd(), "node_modules", "renovate", "dist", "renovate")
+    const renovateProcess = childProcess.spawn(this.nodeJsPath, [renovateIndexJs, ...args], {
+      stdio: ["ignore", "pipe", "pipe"],
+      cwd: this.projectDir,
+      env: {
+        ...process.env,
+        LOG_LEVEL: "debug",
+        LOG_FORMAT: "json",
+      },
+    })
 
     const [exitCode] = await Promise.all([
       new Promise<number | null>((resolve) => renovateProcess.on("close", resolve)),
@@ -207,11 +290,17 @@ interface UpdatesRenovateLogEntry extends BaseRenovateLogEntry {
   config: Record<string, PackageFileWithUpdates[]>
 }
 
+interface BranchesInfoRenovateLogEntry extends BaseRenovateLogEntry {
+  msg: "branches info extended"
+  branchesInformation: BranchConfig[]
+}
+
 type RenovateLogEntry =
   | BaseRenovateLogEntry
   | ErrorSummaryRenovateLogEntry
   | PackageFilesRenovateLogEntry
   | UpdatesRenovateLogEntry
+  | BranchesInfoRenovateLogEntry
 
 function buildList(items: string[]): string {
   if (items.length === 1) {
