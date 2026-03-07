@@ -58,21 +58,18 @@ export class RenovateRun {
     )
   }
 
-  initGitRepo(): this {
+  withGitRepo(): this {
     this.preExecute.push(async () => {
-      const { stdout, stderr } = await exec(
-        "git init && git add -A && git commit -m 'fix: initial commit'",
-        {
-          cwd: this.projectDir,
-          env: {
-            ...process.env,
-            GIT_AUTHOR_NAME: "test",
-            GIT_AUTHOR_EMAIL: "test@test.com",
-            GIT_COMMITTER_NAME: "test",
-            GIT_COMMITTER_EMAIL: "test@test.com",
-          },
+      await exec("git init && git add -A && git commit -m 'fix: initial commit'", {
+        cwd: this.projectDir,
+        env: {
+          ...process.env,
+          GIT_AUTHOR_NAME: "test",
+          GIT_AUTHOR_EMAIL: "test@test.com",
+          GIT_COMMITTER_NAME: "test",
+          GIT_COMMITTER_EMAIL: "test@test.com",
         },
-      ).catch((error: childProcess.ExecException & { stdout: string; stderr: string }) => {
+      }).catch((error: childProcess.ExecException & { stdout: string; stderr: string }) => {
         throw new Error(
           `Failed to initialize git repo (exit code ${error.code}):\n` +
             `stdout: ${error.stdout}\nstderr: ${error.stderr}`,
