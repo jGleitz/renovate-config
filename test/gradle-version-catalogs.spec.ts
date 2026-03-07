@@ -48,7 +48,12 @@ async function createMavenMetadata(
 function startMavenServer(repoDir: string): Promise<{ url: string; close: () => Promise<void> }> {
   return new Promise((resolve) => {
     const server = http.createServer(async (req, res) => {
-      const filePath = path.join(repoDir, decodeURIComponent(req.url!))
+      const filePath = path.resolve(repoDir, decodeURIComponent(req.url!).slice(1))
+      if (!filePath.startsWith(repoDir)) {
+        res.writeHead(400)
+        res.end("Bad request")
+        return
+      }
       try {
         const content = await fs.readFile(filePath, "utf-8")
         res.writeHead(200, { "Content-Type": "application/xml" })
