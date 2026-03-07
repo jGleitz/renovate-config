@@ -1,7 +1,11 @@
 import childProcess from "node:child_process"
+import { promisify } from "node:util"
 import path from "node:path"
 import fs from "node:fs/promises"
 import type { PackageDependency, PackageFile } from "renovate/dist/modules/manager/types.js"
+import type { BranchConfig } from "renovate/dist/workers/types.js"
+
+const exec = promisify(childProcess.exec)
 
 export class RenovateRun {
   private errorOutput: string = ""
@@ -56,23 +60,34 @@ export class RenovateRun {
 
   initGitRepo(): this {
     this.preExecute.push(async () => {
-      childProcess.execSync("git init && git add -A && git commit -m 'fix: initial commit'", {
-        cwd: this.projectDir,
-        stdio: "ignore",
-        env: {
-          ...process.env,
-          GIT_AUTHOR_NAME: "test",
-          GIT_AUTHOR_EMAIL: "test@test.com",
-          GIT_COMMITTER_NAME: "test",
-          GIT_COMMITTER_EMAIL: "test@test.com",
+      const { stdout, stderr } = await exec(
+        "git init && git add -A && git commit -m 'fix: initial commit'",
+        {
+          cwd: this.projectDir,
+          env: {
+            ...process.env,
+            GIT_AUTHOR_NAME: "test",
+            GIT_AUTHOR_EMAIL: "test@test.com",
+            GIT_COMMITTER_NAME: "test",
+            GIT_COMMITTER_EMAIL: "test@test.com",
+          },
         },
+      ).catch((error: childProcess.ExecException & { stdout: string; stderr: string }) => {
+        throw new Error(
+          `Failed to initialize git repo (exit code ${error.code}):\n` +
+            `stdout: ${error.stdout}\nstderr: ${error.stderr}`,
+        )
       })
     })
     return this
   }
 
-  async branches(): Promise<Branch[]> {
+  withSemanticCommits(): this {
     this.args.push("--semantic-commits=enabled")
+    return this
+  }
+
+  async branches(): Promise<BranchConfig[]> {
     await this.execute("--dry-run=full")
     const branchesInfo = this.logEntries.find(
       (entry): entry is BranchesInfoRenovateLogEntry =>
@@ -237,20 +252,9 @@ interface UpdatesRenovateLogEntry extends BaseRenovateLogEntry {
   config: Record<string, PackageFileWithUpdates[]>
 }
 
-export interface Branch {
-  branchName: string
-  prTitle: string
-  upgrades: BranchUpgrade[]
-}
-
-interface BranchUpgrade {
-  depName: string
-  packageFile: string
-}
-
 interface BranchesInfoRenovateLogEntry extends BaseRenovateLogEntry {
   msg: "branches info extended"
-  branchesInformation: Branch[]
+  branchesInformation: BranchConfig[]
 }
 
 type RenovateLogEntry =
