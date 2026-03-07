@@ -54,6 +54,36 @@ export class RenovateRun {
     )
   }
 
+  initGitRepo(): this {
+    this.preExecute.push(async () => {
+      childProcess.execSync("git init && git add -A && git commit -m 'fix: initial commit'", {
+        cwd: this.projectDir,
+        stdio: "ignore",
+        env: {
+          ...process.env,
+          GIT_AUTHOR_NAME: "test",
+          GIT_AUTHOR_EMAIL: "test@test.com",
+          GIT_COMMITTER_NAME: "test",
+          GIT_COMMITTER_EMAIL: "test@test.com",
+        },
+      })
+    })
+    return this
+  }
+
+  async branches(): Promise<Branch[]> {
+    this.args.push("--semantic-commits=enabled")
+    await this.execute("--dry-run=full")
+    const branchesInfo = this.logEntries.find(
+      (entry): entry is BranchesInfoRenovateLogEntry =>
+        entry.msg === "branches info extended" && "branchesInformation" in entry,
+    )
+    if (branchesInfo === undefined) {
+      throw new Error(this.withLogLines("Renovate did not print the branches information!"))
+    }
+    return branchesInfo.branchesInformation
+  }
+
   private async execute(...additionalArgs: string[]): Promise<void> {
     await Promise.all(this.preExecute.map((fn) => fn()))
 
@@ -207,11 +237,28 @@ interface UpdatesRenovateLogEntry extends BaseRenovateLogEntry {
   config: Record<string, PackageFileWithUpdates[]>
 }
 
+export interface Branch {
+  branchName: string
+  prTitle: string
+  upgrades: BranchUpgrade[]
+}
+
+interface BranchUpgrade {
+  depName: string
+  packageFile: string
+}
+
+interface BranchesInfoRenovateLogEntry extends BaseRenovateLogEntry {
+  msg: "branches info extended"
+  branchesInformation: Branch[]
+}
+
 type RenovateLogEntry =
   | BaseRenovateLogEntry
   | ErrorSummaryRenovateLogEntry
   | PackageFilesRenovateLogEntry
   | UpdatesRenovateLogEntry
+  | BranchesInfoRenovateLogEntry
 
 function buildList(items: string[]): string {
   if (items.length === 1) {
