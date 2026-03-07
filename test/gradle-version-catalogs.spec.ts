@@ -8,46 +8,35 @@ describe("Gradle version catalogs", () => {
     async ({ renovate }) => {
       await fs.cp("test/fixtures/gradle-version-catalogs", renovate.projectDir, { recursive: true })
 
-      const dependencies = await renovate.extract()
-
-      // Verify all dependencies are extracted
-      const jacksonDatabind = dependencies.find(
-        (d) => d.depName === "com.fasterxml.jackson.core:jackson-databind",
-      )
-      expect(jacksonDatabind).toBeDefined()
-
-      const junitJupiter = dependencies.find((d) => d.depName === "org.junit.jupiter:junit-jupiter")
-      expect(junitJupiter).toBeDefined()
-
-      const kotlinPlugin = dependencies.find((d) => d.depName === "org.jetbrains.kotlin.jvm")
-      expect(kotlinPlugin).toBeDefined()
-
-      const develocityPlugin = dependencies.find((d) => d.depName === "com.gradle.develocity")
-      expect(develocityPlugin).toBeDefined()
+      const branches = await renovate.initGitRepo().branches()
 
       // Production dependencies from gradle/libs.versions.toml should get fix(deps)
-      expect(jacksonDatabind).toMatchObject({
-        semanticCommitType: "fix",
-        semanticCommitScope: "deps",
-      })
+      const jacksonBranch = branches.find((b) =>
+        b.upgrades.some((u) => u.depName === "com.fasterxml.jackson.core:jackson-databind"),
+      )
+      expect(jacksonBranch).toBeDefined()
+      expect(jacksonBranch!.prTitle).toMatch(/^fix\(deps\):/)
 
       // Test dependencies from gradle/testLibs.versions.toml should get chore(test deps)
-      expect(junitJupiter).toMatchObject({
-        semanticCommitType: "chore",
-        semanticCommitScope: "test deps",
-      })
+      const junitBranch = branches.find((b) =>
+        b.upgrades.some((u) => u.depName === "org.junit.jupiter:junit-jupiter"),
+      )
+      expect(junitBranch).toBeDefined()
+      expect(junitBranch!.prTitle).toMatch(/^chore\(test deps\):/)
 
       // Build dependencies from gradle/buildLibs.versions.toml should get chore(build deps)
-      expect(kotlinPlugin).toMatchObject({
-        semanticCommitType: "chore",
-        semanticCommitScope: "build deps",
-      })
+      const kotlinBranch = branches.find((b) =>
+        b.upgrades.some((u) => u.depName === "org.jetbrains.kotlin.jvm"),
+      )
+      expect(kotlinBranch).toBeDefined()
+      expect(kotlinBranch!.prTitle).toMatch(/^chore\(build deps\):/)
 
       // Dependencies in settings.gradle.kts should get chore(build deps)
-      expect(develocityPlugin).toMatchObject({
-        semanticCommitType: "chore",
-        semanticCommitScope: "build deps",
-      })
+      const develocityBranch = branches.find((b) =>
+        b.upgrades.some((u) => u.depName === "com.gradle.develocity"),
+      )
+      expect(develocityBranch).toBeDefined()
+      expect(develocityBranch!.prTitle).toMatch(/^chore\(build deps\):/)
     },
   )
 })
