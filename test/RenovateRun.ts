@@ -35,6 +35,43 @@ export class RenovateRun {
     return this
   }
 
+  withOverriddenDatasource(
+    builtinDatasource: string,
+    packageVersions: Record<string, string[]>,
+  ): this {
+    const customName = `${builtinDatasource}-override`
+    const versionsDir = path.join(this.projectDir, `${customName}-versions`)
+    for (const [packageName, versions] of Object.entries(packageVersions)) {
+      this.preExecute.push(async () => {
+        await fs.mkdir(versionsDir, { recursive: true })
+        await fs.writeFile(
+          path.join(versionsDir, `${packageName}.txt`),
+          versions.join("\n"),
+          "utf-8",
+        )
+      })
+    }
+    this.customDatasourceDefinitions[customName] = {
+      defaultRegistryUrlTemplate: `file://${versionsDir}/{{packageName}}.txt`,
+      format: "plain",
+    }
+    this.preExecute.push(async () => {
+      const configPath = path.join(this.projectDir, "renovate.json5")
+      const config = await fs.readFile(configPath, "utf-8")
+      const insertionTarget = "  ],\n  customManagers:"
+      const newRule = [
+        `    {`,
+        `      matchDatasources: ["${builtinDatasource}"],`,
+        `      registryUrls: ["file://${versionsDir}/{{packageName}}.txt"],`,
+        `      overrideDatasource: "custom.${customName}",`,
+        `    },`,
+        ``,
+      ].join("\n")
+      await fs.writeFile(configPath, config.replace(insertionTarget, newRule + insertionTarget))
+    })
+    return this
+  }
+
   async extract(): Promise<ExtractedDependency[]> {
     await this.execute("--dry-run=extract")
     const packageFilesByDatasource = this.logEntries.find(
@@ -98,7 +135,9 @@ export class RenovateRun {
   }
 
   private async execute(...additionalArgs: string[]): Promise<void> {
-    await Promise.all(this.preExecute.map((fn) => fn()))
+    for (const fn of this.preExecute) {
+      await fn()
+    }
 
     const args = [...this.args, ...additionalArgs]
     if (Object.keys(this.customDatasourceDefinitions).length > 0) {
