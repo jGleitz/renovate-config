@@ -8,7 +8,7 @@ describe("Gradle version catalogs", () => {
     async ({ renovate }) => {
       await fs.cp("test/fixtures/gradle-version-catalogs", renovate.projectDir, { recursive: true })
 
-      const branches = await renovate.initGitRepo().withSemanticCommits().branches()
+      const branches = await renovate.withGitRepo().withSemanticCommits().branches()
 
       // Production dependencies from gradle/libs.versions.toml should get fix(deps)
       const jacksonBranch = branches.find((b) =>
