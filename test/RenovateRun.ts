@@ -13,10 +13,6 @@ export class RenovateRun {
   private readonly args: string[] = ["--platform=local"]
   private readonly parseErrors: string[] = []
   private readonly logEntries: RenovateLogEntry[] = []
-  private readonly customDatasources: Record<
-    string,
-    { defaultRegistryUrlTemplate: string; format: string }
-  > = {}
 
   constructor(
     private readonly nodeJsPath: string,
@@ -30,10 +26,13 @@ export class RenovateRun {
         await fs.writeFile(versionsFile, packageVersions.join("\n"), "utf-8")
       })
     }
-    this.customDatasources[name] = {
-      defaultRegistryUrlTemplate: `file://${path.join(this.projectDir, `${name}-{{packageName}}-versions.txt`)}`,
-      format: "plain",
+    const customDatasources = {
+      [name]: {
+        defaultRegistryUrlTemplate: `file://${path.join(this.projectDir, `${name}-{{packageName}}-versions.txt`)}`,
+        format: "plain",
+      },
     }
+    this.args.push(`--custom-datasources=${JSON.stringify(customDatasources)}`)
     return this
   }
 
@@ -102,21 +101,20 @@ export class RenovateRun {
   private async execute(...additionalArgs: string[]): Promise<void> {
     await Promise.all(this.preExecute.map((fn) => fn()))
 
-    const allArgs = [...this.args, ...additionalArgs]
-    if (Object.keys(this.customDatasources).length > 0) {
-      allArgs.push(`--custom-datasources=${JSON.stringify(this.customDatasources)}`)
-    }
-
     const renovateIndexJs = path.join(process.cwd(), "node_modules", "renovate", "dist", "renovate")
-    const renovateProcess = childProcess.spawn(this.nodeJsPath, [renovateIndexJs, ...allArgs], {
-      stdio: ["ignore", "pipe", "pipe"],
-      cwd: this.projectDir,
-      env: {
-        ...process.env,
-        LOG_LEVEL: "debug",
-        LOG_FORMAT: "json",
+    const renovateProcess = childProcess.spawn(
+      this.nodeJsPath,
+      [renovateIndexJs, ...this.args, ...additionalArgs],
+      {
+        stdio: ["ignore", "pipe", "pipe"],
+        cwd: this.projectDir,
+        env: {
+          ...process.env,
+          LOG_LEVEL: "debug",
+          LOG_FORMAT: "json",
+        },
       },
-    })
+    )
 
     const [exitCode] = await Promise.all([
       new Promise<number | null>((resolve) => renovateProcess.on("close", resolve)),
