@@ -10,7 +10,7 @@ const exec = promisify(childProcess.exec)
 export class RenovateRun {
   private errorOutput: string = ""
   private readonly preExecute: (() => Promise<void>)[] = []
-  private readonly args: string[] = ["--platform=local"]
+  private readonly args: string[] = ["--platform=local", '--host-rules=[{"enabled":false}]']
   private readonly parseErrors: string[] = []
   private readonly logEntries: RenovateLogEntry[] = []
 
