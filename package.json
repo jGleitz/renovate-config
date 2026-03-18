@@ -22,7 +22,7 @@
     "@types/which": "3.0.4",
     "npm-run-all2": "8.0.4",
     "prettier": "3.8.1",
-    "renovate": "43.73.2",
+    "renovate": "43.76.1",
     "typescript": "5.9.3",
     "vitest": "4.1.0",
     "which": "6.0.1"
