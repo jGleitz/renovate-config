@@ -9,10 +9,9 @@ describe("Gradle version catalogs", () => {
       await fs.cp("test/fixtures/gradle-version-catalogs", renovate.projectDir, { recursive: true })
 
       const branches = await renovate
-        .withDatasourceOverride("maven", {
+        .withDataSourceOverride("maven", {
           // Production deps (libs.versions.toml) - patch update
           "com.fasterxml.jackson.core:jackson-databind": ["2.17.0", "2.17.2"],
-          "com.fasterxml.jackson.module:jackson-module-kotlin": ["2.17.0", "2.17.2"],
           // Production deps (libs.versions.toml) - minor update
           "org.slf4j:slf4j-api": ["2.0.12", "2.1.0"],
           // Production deps (libs.versions.toml) - major update
@@ -34,7 +33,7 @@ describe("Gradle version catalogs", () => {
           // Build deps (settings.gradle.kts) - major update
           "com.gradle.develocity:com.gradle.develocity.gradle.plugin": ["3.17", "4.0.0"],
         })
-        .withGitRepo()
+        .withGitRepository()
         .withSemanticCommits()
         .branches()
 

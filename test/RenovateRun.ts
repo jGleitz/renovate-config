@@ -11,7 +11,10 @@ export class RenovateRun {
   private errorOutput: string = ""
   private readonly preExecute: (() => Promise<void>)[] = []
   private readonly args: string[] = ["--platform=local", '--host-rules=[{"enabled":false}]']
-  private readonly env: Record<string, string> = {}
+  private readonly env: Record<string, string> = {
+    LOG_LEVEL: "debug",
+    LOG_FORMAT: "json",
+  }
   private readonly parseErrors: string[] = []
   private readonly logEntries: RenovateLogEntry[] = []
 
@@ -37,7 +40,7 @@ export class RenovateRun {
     return this
   }
 
-  withDatasourceOverride(name: string, versions: Record<string, string[]>): this {
+  withDataSourceOverride(name: string, versions: Record<string, string[]>): this {
     this.withCustomDataSource(name, versions)
     const existing = this.env["RENOVATE_PACKAGE_RULES"]
       ? (JSON.parse(this.env["RENOVATE_PACKAGE_RULES"]) as unknown[])
@@ -75,7 +78,7 @@ export class RenovateRun {
     )
   }
 
-  withGitRepo(): this {
+  withGitRepository(): this {
     this.preExecute.push(async () => {
       await exec("git init && git add -A && git commit -m 'fix: initial commit'", {
         cwd: this.projectDir,
@@ -125,8 +128,6 @@ export class RenovateRun {
         cwd: this.projectDir,
         env: {
           ...process.env,
-          LOG_LEVEL: "debug",
-          LOG_FORMAT: "json",
           ...this.env,
         },
       },

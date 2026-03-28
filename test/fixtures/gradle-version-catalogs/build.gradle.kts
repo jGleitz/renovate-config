@@ -5,7 +5,6 @@ plugins {
 
 dependencies {
     implementation(libs.jackson.databind)
-    implementation(libs.jackson.kotlin)
     implementation(libs.slf4j.api)
     implementation(libs.commons.lang3)
 

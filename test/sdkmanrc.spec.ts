@@ -7,7 +7,7 @@ describe(".sdkmanrc files", () => {
     await fs.cp("test/fixtures/sdkmanrc", renovate.projectDir, { recursive: true })
 
     const lookedUpDependencies = await renovate
-      .withDatasourceOverride("java-version", {
+      .withDataSourceOverride("java-version", {
         java: ["24.0.1+9", "24.0.2+12", "25.0.2+10.0.LTS"],
       })
       .lookup()
