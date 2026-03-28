@@ -9,7 +9,7 @@ const exec = promisify(childProcess.exec)
 
 export class RenovateRun {
   private errorOutput: string = ""
-  private readonly preExecute: (() => Promise<void>)[] = []
+  private readonly preExecuteOnce: (() => Promise<void>)[] = []
   private readonly args: string[] = ["--platform=local", '--host-rules=[{"enabled":false}]']
   private readonly env: Record<string, string> = {
     LOG_LEVEL: "debug",
@@ -26,7 +26,7 @@ export class RenovateRun {
   withCustomDataSource(name: string, versions: Record<string, string[]>): this {
     const versionsFile = (pkg: string) => path.join(this.projectDir, `${name}-${pkg}-versions.txt`)
     for (const [packageName, packageVersions] of Object.entries(versions)) {
-      this.preExecute.push(async () => {
+      this.preExecuteOnce.push(async () => {
         await fs.writeFile(versionsFile(packageName), packageVersions.join("\n"), "utf-8")
       })
     }
@@ -79,7 +79,7 @@ export class RenovateRun {
   }
 
   withGitRepository(): this {
-    this.preExecute.push(async () => {
+    this.preExecuteOnce.push(async () => {
       await exec("git init && git add -A && git commit -m 'fix: initial commit'", {
         cwd: this.projectDir,
         env: {
@@ -117,7 +117,8 @@ export class RenovateRun {
   }
 
   private async execute(...additionalArgs: string[]): Promise<void> {
-    await Promise.all(this.preExecute.map((fn) => fn()))
+    const handlers = this.preExecuteOnce.splice(0)
+    await Promise.all(handlers.map((fn) => fn()))
 
     const renovateIndexJs = path.join(process.cwd(), "node_modules", "renovate", "dist", "renovate")
     const renovateProcess = childProcess.spawn(
