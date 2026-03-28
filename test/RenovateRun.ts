@@ -84,7 +84,7 @@ export class RenovateRun {
 
   withGitRepository(): this {
     this.preExecuteOnce.push(async () => {
-      await exec("git init && git add -A && git commit -m 'fix: initial commit'", {
+      await exec("git init -b main && git add -A && git commit -m 'fix: initial commit'", {
         cwd: this.projectDir,
         env: {
           ...process.env,
