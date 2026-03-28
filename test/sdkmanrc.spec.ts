@@ -8,7 +8,7 @@ describe(".sdkmanrc files", () => {
 
     const lookedUpDependencies = await renovate
       .withDataSourceOverride("java-version", {
-        java: ["24.0.1+9", "24.0.2+12", "25.0.2+10.0.LTS"],
+        java: ["24.0.1+9", "24.1.0+10", "25.0.2+10.0.LTS"],
       })
       .lookup()
 
@@ -20,9 +20,9 @@ describe(".sdkmanrc files", () => {
       datasource: "java-version",
     })
     const updates = lookedUpDependencies[0]!.updates
-    expect(updates.find((u) => u.updateType === "patch")).toMatchObject({
-      newVersion: "24.0.2",
-      newValue: "24.0.2",
+    expect(updates.find((u) => u.updateType === "minor")).toMatchObject({
+      newVersion: "24.1.0",
+      newValue: "24.1.0",
     })
     expect(updates.find((u) => u.updateType === "major")).toMatchObject({
       newVersion: "25.0.2",
