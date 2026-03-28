@@ -7,7 +7,9 @@ dependencies {
     implementation(libs.jackson.databind)
     implementation(libs.jackson.kotlin)
     implementation(libs.slf4j.api)
+    implementation(libs.commons.lang3)
 
     testImplementation(testLibs.junit.jupiter)
     testImplementation(testLibs.mockito.core)
+    testImplementation(testLibs.assertj.core)
 }
