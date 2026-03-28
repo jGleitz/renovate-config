@@ -38,13 +38,14 @@ export class RenovateRun {
 
   withDatasourceOverride(name: string, versions: Record<string, string[]>): this {
     this.withCustomDataSource(name, versions)
-    this.preExecute.push(async () => {
-      const configPath = path.join(this.projectDir, "renovate.json5")
-      const config = await fs.readFile(configPath, "utf-8")
-      const rule = `    {\n      matchDatasources: ["${name}"],\n      overrideDatasource: "custom.${name}",\n      registryUrls: [],\n    },\n`
-      const modified = config.replace("  ],\n  customManagers:", rule + "  ],\n  customManagers:")
-      await fs.writeFile(configPath, modified, "utf-8")
-    })
+    const packageRules = [
+      {
+        matchDatasources: [name],
+        overrideDatasource: `custom.${name}`,
+        registryUrls: [],
+      },
+    ]
+    this.args.push(`--package-rules=${JSON.stringify(packageRules)}`)
     return this
   }
 

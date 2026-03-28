@@ -18,13 +18,15 @@ describe(".sdkmanrc files", () => {
       packageName: "java",
       currentValue: "24.0.1",
       datasource: "java-version",
-      updates: [
-        {
-          updateType: "major",
-          newVersion: "25.0.2",
-          newValue: "25.0.2",
-        },
-      ],
+    })
+    const updates = lookedUpDependencies[0]!.updates
+    expect(updates.find((u) => u.updateType === "patch")).toMatchObject({
+      newVersion: "24.0.2",
+      newValue: "24.0.2",
+    })
+    expect(updates.find((u) => u.updateType === "major")).toMatchObject({
+      newVersion: "25.0.2",
+      newValue: "25.0.2",
     })
   })
 })
