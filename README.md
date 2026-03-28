@@ -10,12 +10,12 @@ repositories.
 
 ## Commands
 
-| Command                | Description                                     |
-| ---------------------- | ----------------------------------------------- |
-| `npm run check`        | Run all checks (lint, validate, compile, test)  |
-| `npm test`             | Run the tests                                   |
-| `npm run test:verbose` | Run the tests, printing all Renovate debug logs |
-| `npm run lint`         | Check code formatting                           |
-| `npm run format`       | Fix code formatting                             |
-| `npm run validate`     | Validate the Renovate configuration files       |
-| `npm run compile`      | Compile TypeScript                              |
+| Command                 | Description                                     |
+| ----------------------- | ----------------------------------------------- |
+| `pnpm run check`        | Run all checks (lint, validate, compile, test)  |
+| `pnpm test`             | Run the tests                                   |
+| `pnpm run test:verbose` | Run the tests, printing all Renovate debug logs |
+| `pnpm run lint`         | Check code formatting                           |
+| `pnpm run format`       | Fix code formatting                             |
+| `pnpm run validate`     | Validate the Renovate configuration files       |
+| `pnpm run compile`      | Compile TypeScript                              |
