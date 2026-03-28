@@ -122,7 +122,9 @@ export class RenovateRun {
 
   private async execute(...additionalArgs: string[]): Promise<void> {
     const handlers = this.preExecuteOnce.splice(0)
-    await Promise.all(handlers.map((fn) => fn()))
+    for (const fn of handlers) {
+      await fn()
+    }
 
     const renovateIndexJs = path.join(process.cwd(), "node_modules", "renovate", "dist", "renovate")
     const renovateProcess = childProcess.spawn(
