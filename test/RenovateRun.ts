@@ -1,6 +1,7 @@
 import childProcess from "node:child_process"
 import { promisify } from "node:util"
 import path from "node:path"
+import { pathToFileURL } from "node:url"
 import fs from "node:fs/promises"
 import type { PackageDependency, PackageFile } from "renovate/dist/modules/manager/types.js"
 import type { BranchConfig } from "renovate/dist/workers/types.js"
@@ -36,7 +37,7 @@ export class RenovateRun {
     }
     const customDatasources = {
       [name]: {
-        defaultRegistryUrlTemplate: `file://${versionsFile("{{encodeURIComponent packageName}}")}`,
+        defaultRegistryUrlTemplate: `${pathToFileURL(this.projectDir).href}/${name}-{{encodeURIComponent packageName}}-versions.txt`,
         format: "plain",
       },
     }
