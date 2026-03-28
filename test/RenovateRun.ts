@@ -25,11 +25,10 @@ export class RenovateRun {
   ) {}
 
   withCustomDataSource(name: string, versions: Record<string, string[]>): this {
-    const versionsFile = (pkg: string) => path.join(this.projectDir, `${name}-${pkg}-versions.txt`)
     for (const [packageName, packageVersions] of Object.entries(versions)) {
       this.preExecuteOnce.push(async () => {
         await fs.writeFile(
-          versionsFile(encodeURIComponent(packageName)),
+          path.join(this.projectDir, `${name}-${encodeURIComponent(packageName)}-versions.txt`),
           packageVersions.join("\n"),
           "utf-8",
         )
