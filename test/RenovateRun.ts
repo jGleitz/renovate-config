@@ -11,6 +11,7 @@ export class RenovateRun {
   private errorOutput: string = ""
   private readonly preExecute: (() => Promise<void>)[] = []
   private readonly args: string[] = ["--platform=local", '--host-rules=[{"enabled":false}]']
+  private readonly env: Record<string, string> = {}
   private readonly parseErrors: string[] = []
   private readonly logEntries: RenovateLogEntry[] = []
 
@@ -38,14 +39,15 @@ export class RenovateRun {
 
   withDatasourceOverride(name: string, versions: Record<string, string[]>): this {
     this.withCustomDataSource(name, versions)
-    const packageRules = [
-      {
-        matchDatasources: [name],
-        overrideDatasource: `custom.${name}`,
-        registryUrls: [],
-      },
-    ]
-    this.args.push(`--package-rules=${JSON.stringify(packageRules)}`)
+    const existing = this.env["RENOVATE_PACKAGE_RULES"]
+      ? (JSON.parse(this.env["RENOVATE_PACKAGE_RULES"]) as unknown[])
+      : []
+    existing.push({
+      matchDatasources: [name],
+      overrideDatasource: `custom.${name}`,
+      registryUrls: [],
+    })
+    this.env["RENOVATE_PACKAGE_RULES"] = JSON.stringify(existing)
     return this
   }
 
@@ -125,6 +127,7 @@ export class RenovateRun {
           ...process.env,
           LOG_LEVEL: "debug",
           LOG_FORMAT: "json",
+          ...this.env,
         },
       },
     )
