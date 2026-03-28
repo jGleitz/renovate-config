@@ -9,7 +9,7 @@ describe("Gradle version catalogs", () => {
       await fs.cp("test/fixtures/gradle-version-catalogs", renovate.projectDir, { recursive: true })
 
       const branches = await renovate
-        .withCustomDataSource("maven", {
+        .withDatasourceOverride("maven", {
           "com.fasterxml.jackson.core:jackson-databind": ["2.17.0", "2.18.0"],
           "com.fasterxml.jackson.module:jackson-module-kotlin": ["2.17.0", "2.18.0"],
           "org.slf4j:slf4j-api": ["2.0.12", "2.0.16"],

@@ -36,6 +36,18 @@ export class RenovateRun {
     return this
   }
 
+  withDatasourceOverride(name: string, versions: Record<string, string[]>): this {
+    this.withCustomDataSource(name, versions)
+    this.preExecute.push(async () => {
+      const configPath = path.join(this.projectDir, "renovate.json5")
+      const config = await fs.readFile(configPath, "utf-8")
+      const rule = `    {\n      matchDatasources: ["${name}"],\n      overrideDatasource: "custom.${name}",\n      registryUrls: [],\n    },\n`
+      const modified = config.replace("  ],\n  customManagers:", rule + "  ],\n  customManagers:")
+      await fs.writeFile(configPath, modified, "utf-8")
+    })
+    return this
+  }
+
   async extract(): Promise<ExtractedDependency[]> {
     await this.execute("--dry-run=extract")
     const packageFilesByDatasource = this.logEntries.find(
