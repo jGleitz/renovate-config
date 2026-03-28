@@ -27,12 +27,16 @@ export class RenovateRun {
     const versionsFile = (pkg: string) => path.join(this.projectDir, `${name}-${pkg}-versions.txt`)
     for (const [packageName, packageVersions] of Object.entries(versions)) {
       this.preExecuteOnce.push(async () => {
-        await fs.writeFile(versionsFile(packageName), packageVersions.join("\n"), "utf-8")
+        await fs.writeFile(
+          versionsFile(encodeURIComponent(packageName)),
+          packageVersions.join("\n"),
+          "utf-8",
+        )
       })
     }
     const customDatasources = {
       [name]: {
-        defaultRegistryUrlTemplate: `file://${versionsFile("{{packageName}}")}`,
+        defaultRegistryUrlTemplate: `file://${versionsFile("{{encodeURIComponent packageName}}")}`,
         format: "plain",
       },
     }
