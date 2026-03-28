@@ -95,8 +95,7 @@ export class RenovateRun {
       .split("\n")
       .filter((line) => line.trim() !== "")) {
       try {
-        const entry = JSON.parse(output) as RenovateLogEntry
-        this.logEntries.push(entry)
+        this.logEntries.push(JSON.parse(output))
         console.log(output)
       } catch (cause) {
         this.parseErrors.push(`Failed to parse log line:\n${output}\n${cause}`)
