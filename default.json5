@@ -37,6 +37,11 @@
       semanticCommitType: "chore",
       semanticCommitScope: "build deps",
     },
+    {
+      matchFileNames: ["gradle/libs.versions.toml"],
+      semanticCommitType: "fix",
+      semanticCommitScope: "deps",
+    },
   ],
   customManagers: [
     {
