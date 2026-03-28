@@ -19,4 +19,3 @@ repositories.
 | `npm run format`       | Fix code formatting                             |
 | `npm run validate`     | Validate the Renovate configuration files       |
 | `npm run compile`      | Compile TypeScript                              |
-
