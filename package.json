@@ -10,6 +10,7 @@
     "lint": "prettier --check .",
     "validate": "renovate-config-validator --strict default.json5 renovate.json5",
     "test": "vitest run",
+    "test:verbose": "vitest run --silent false",
     "check": "npm-run-all --parallel lint validate compile --sequential test"
   },
   "repository": {
