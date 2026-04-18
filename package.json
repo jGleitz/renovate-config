@@ -21,7 +21,7 @@
   "devDependencies": {
     "@types/which": "3.0.4",
     "npm-run-all2": "8.0.4",
-    "prettier": "3.8.2",
+    "prettier": "3.8.3",
     "renovate": "43.120.1",
     "typescript": "6.0.2",
     "vitest": "4.1.4",
