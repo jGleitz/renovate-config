@@ -1,12 +1,21 @@
 import childProcess from "node:child_process"
+import { promisify } from "node:util"
 import path from "node:path"
+import { pathToFileURL } from "node:url"
 import fs from "node:fs/promises"
 import type { PackageDependency, PackageFile } from "renovate/dist/modules/manager/types.js"
+import type { BranchConfig } from "renovate/dist/workers/types.js"
+
+const exec = promisify(childProcess.exec)
 
 export class RenovateRun {
   private errorOutput: string = ""
-  private readonly preExecute: (() => Promise<void>)[] = []
-  private readonly args: string[] = ["--platform=local"]
+  private readonly preExecuteOnce: (() => Promise<void>)[] = []
+  private readonly args: string[] = ["--platform=local", '--host-rules=[{"enabled":false}]']
+  private readonly env: Record<string, string> = {
+    LOG_LEVEL: "debug",
+    LOG_FORMAT: "json",
+  }
   private readonly parseErrors: string[] = []
   private readonly logEntries: RenovateLogEntry[] = []
 
@@ -15,18 +24,37 @@ export class RenovateRun {
     readonly projectDir: string,
   ) {}
 
-  withCustomDataSource(name: string, versions: string[]): this {
-    const versionsFile = path.join(this.projectDir, `${name}-versions.txt`)
-    this.preExecute.push(async () => {
-      await fs.writeFile(versionsFile, versions.join("\n"), "utf-8")
-    })
+  withCustomDataSource(name: string, versions: Record<string, string[]>): this {
+    for (const [packageName, packageVersions] of Object.entries(versions)) {
+      this.preExecuteOnce.push(async () => {
+        await fs.writeFile(
+          path.join(this.projectDir, `${name}-${encodeURIComponent(packageName)}-versions.txt`),
+          packageVersions.join("\n"),
+          "utf-8",
+        )
+      })
+    }
     const customDatasources = {
       [name]: {
-        defaultRegistryUrlTemplate: `file://${versionsFile}`,
+        defaultRegistryUrlTemplate: `${pathToFileURL(this.projectDir).href}/${name}-{{encodeURIComponent packageName}}-versions.txt`,
         format: "plain",
       },
     }
     this.args.push(`--custom-datasources=${JSON.stringify(customDatasources)}`)
+    return this
+  }
+
+  withDataSourceOverride(name: string, versions: Record<string, string[]>): this {
+    this.withCustomDataSource(name, versions)
+    const existing = this.env["RENOVATE_PACKAGE_RULES"]
+      ? (JSON.parse(this.env["RENOVATE_PACKAGE_RULES"]) as unknown[])
+      : []
+    existing.push({
+      matchDatasources: [name],
+      overrideDatasource: `custom.${name}`,
+      registryUrls: [],
+    })
+    this.env["RENOVATE_PACKAGE_RULES"] = JSON.stringify(existing)
     return this
   }
 
@@ -54,8 +82,49 @@ export class RenovateRun {
     )
   }
 
+  withGitRepository(): this {
+    this.preExecuteOnce.push(async () => {
+      await exec("git init -b main && git add -A && git commit -m 'fix: initial commit'", {
+        cwd: this.projectDir,
+        env: {
+          ...process.env,
+          GIT_AUTHOR_NAME: "test",
+          GIT_AUTHOR_EMAIL: "test@test.com",
+          GIT_COMMITTER_NAME: "test",
+          GIT_COMMITTER_EMAIL: "test@test.com",
+        },
+      }).catch((error: childProcess.ExecException & { stdout: string; stderr: string }) => {
+        throw new Error(
+          `Failed to initialize git repo (exit code ${error.code}):\n` +
+            `stdout: ${error.stdout}\nstderr: ${error.stderr}`,
+        )
+      })
+    })
+    return this
+  }
+
+  withSemanticCommits(): this {
+    this.args.push("--semantic-commits=enabled")
+    return this
+  }
+
+  async branches(): Promise<BranchConfig[]> {
+    await this.execute("--dry-run=full")
+    const branchesInfo = this.logEntries.find(
+      (entry): entry is BranchesInfoRenovateLogEntry =>
+        entry.msg === "branches info extended" && "branchesInformation" in entry,
+    )
+    if (branchesInfo === undefined) {
+      throw new Error(this.withLogLines("Renovate did not print the branches information!"))
+    }
+    return branchesInfo.branchesInformation
+  }
+
   private async execute(...additionalArgs: string[]): Promise<void> {
-    await Promise.all(this.preExecute.map((fn) => fn()))
+    const handlers = this.preExecuteOnce.splice(0)
+    for (const fn of handlers) {
+      await fn()
+    }
 
     const renovateIndexJs = path.join(process.cwd(), "node_modules", "renovate", "dist", "renovate")
     const renovateProcess = childProcess.spawn(
@@ -66,8 +135,7 @@ export class RenovateRun {
         cwd: this.projectDir,
         env: {
           ...process.env,
-          LOG_LEVEL: "debug",
-          LOG_FORMAT: "json",
+          ...this.env,
         },
       },
     )
@@ -207,11 +275,17 @@ interface UpdatesRenovateLogEntry extends BaseRenovateLogEntry {
   config: Record<string, PackageFileWithUpdates[]>
 }
 
+interface BranchesInfoRenovateLogEntry extends BaseRenovateLogEntry {
+  msg: "branches info extended"
+  branchesInformation: BranchConfig[]
+}
+
 type RenovateLogEntry =
   | BaseRenovateLogEntry
   | ErrorSummaryRenovateLogEntry
   | PackageFilesRenovateLogEntry
   | UpdatesRenovateLogEntry
+  | BranchesInfoRenovateLogEntry
 
 function buildList(items: string[]): string {
   if (items.length === 1) {
