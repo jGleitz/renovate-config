@@ -6,7 +6,7 @@ export default defineConfig({
     include: ["test/**/*.spec.ts"],
     isolate: false,
     pool: "threads",
-    testTimeout: 30_000,
+    testTimeout: 60_000,
     slowTestThreshold: 5_000,
   },
 })

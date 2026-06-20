@@ -4,7 +4,6 @@ import path from "node:path"
 import { pathToFileURL } from "node:url"
 import fs from "node:fs/promises"
 import type { PackageDependency, PackageFile } from "renovate/dist/modules/manager/types.js"
-import type { BranchConfig } from "renovate/dist/workers/types.js"
 
 const exec = promisify(childProcess.exec)
 
@@ -12,12 +11,19 @@ export class RenovateRun {
   private errorOutput: string = ""
   private readonly preExecuteOnce: (() => Promise<void>)[] = []
   private readonly args: string[] = ["--platform=local", '--host-rules=[{"enabled":false}]']
-  private readonly env: Record<string, string> = {
+  private readonly env = {
     LOG_LEVEL: "debug",
-    LOG_FORMAT: "json",
+    LOG_FORMAT: "pretty",
+    LOG_FILE: "renovate.log",
+    LOG_FILE_LEVEL: "trace",
+    LOG_FILE_FORMAT: "json",
+    RENOVATE_PACKAGE_RULES: undefined as string | undefined,
   }
   private readonly parseErrors: string[] = []
   private readonly logEntries: RenovateLogEntry[] = []
+  private readonly branchTitles: BranchTitle[] = []
+  private extractedPackageFiles: Record<string, PackageFile[]> | undefined
+  private packageFilesWithUpdates: Record<string, PackageFileWithUpdates[]> | undefined
 
   constructor(
     private readonly nodeJsPath: string,
@@ -38,6 +44,9 @@ export class RenovateRun {
       [name]: {
         defaultRegistryUrlTemplate: `${pathToFileURL(this.projectDir).href}/${name}-{{encodeURIComponent packageName}}-versions.txt`,
         format: "plain",
+        transformTemplates: [
+          '{"releases": $map(releases, function($release) { {"version": $release.version, "releaseTimestamp": "2026-01-01T00:00:00Z"} })}',
+        ],
       },
     }
     this.args.push(`--custom-datasources=${JSON.stringify(customDatasources)}`)
@@ -46,39 +55,37 @@ export class RenovateRun {
 
   withDataSourceOverride(name: string, versions: Record<string, string[]>): this {
     this.withCustomDataSource(name, versions)
-    const existing = this.env["RENOVATE_PACKAGE_RULES"]
-      ? (JSON.parse(this.env["RENOVATE_PACKAGE_RULES"]) as unknown[])
+    const existing = this.env.RENOVATE_PACKAGE_RULES
+      ? (JSON.parse(this.env.RENOVATE_PACKAGE_RULES) as unknown[])
       : []
     existing.push({
       matchDatasources: [name],
       overrideDatasource: `custom.${name}`,
       registryUrls: [],
     })
-    this.env["RENOVATE_PACKAGE_RULES"] = JSON.stringify(existing)
+    this.env.RENOVATE_PACKAGE_RULES = JSON.stringify(existing)
     return this
   }
 
   async extract(): Promise<ExtractedDependency[]> {
     await this.execute("--dry-run=extract")
-    const packageFilesByDatasource = this.logEntries.find(
-      (entry) => "packageFiles" in entry,
-    )?.packageFiles
-    if (packageFilesByDatasource === undefined) {
+    if (this.extractedPackageFiles === undefined) {
       throw new Error(this.withLogLines("Renovate did not print the extracted package files!"))
     }
-    return dependenciesWithPackageFile<PackageFile>(packageFilesByDatasource)
+    return dependenciesWithPackageFile<PackageFile>(this.extractedPackageFiles)
   }
 
   async lookup(): Promise<LookedUpDependency[]> {
     await this.execute("--dry-run=lookup")
-    const packageFilesByDatasource = this.logEntries.find(
-      (entry) => entry.msg === "packageFiles with updates" && "config" in entry,
-    )?.config
-    if (packageFilesByDatasource === undefined) {
+    return this.parseLookedUpDependencies()
+  }
+
+  private parseLookedUpDependencies(): LookedUpDependency[] {
+    if (this.packageFilesWithUpdates === undefined) {
       throw new Error(this.withLogLines("Renovate did not print the looked up package files!"))
     }
     return dependenciesWithPackageFile<PackageFileWithUpdates, PackageDependencyWithUpdates>(
-      packageFilesByDatasource,
+      this.packageFilesWithUpdates,
     )
   }
 
@@ -108,19 +115,33 @@ export class RenovateRun {
     return this
   }
 
-  async branches(): Promise<BranchConfig[]> {
-    await this.execute("--dry-run=full")
-    const branchesInfo = this.logEntries.find(
-      (entry): entry is BranchesInfoRenovateLogEntry =>
-        entry.msg === "branches info extended" && "branchesInformation" in entry,
-    )
-    if (branchesInfo === undefined) {
-      throw new Error(this.withLogLines("Renovate did not print the branches information!"))
+  async branches(): Promise<PlannedBranch[]> {
+    await this.execute("--dry-run=lookup")
+
+    const lookedUpDependencies = this.parseLookedUpDependencies()
+    if (this.branchTitles.length === 0) {
+      throw new Error(this.withLogLines("Renovate did not print planned PR titles!"))
     }
-    return branchesInfo.branchesInformation
+
+    return this.branchTitles.map((entry) => ({
+      branchName: entry.branch,
+      prTitle: entry.prTitle,
+      upgrades: lookedUpDependencies.filter((dep) =>
+        dep.updates.some((update) => update.branchName === entry.branch),
+      ),
+    }))
   }
 
   private async execute(...additionalArgs: string[]): Promise<void> {
+    this.errorOutput = ""
+    this.parseErrors.splice(0)
+    this.logEntries.splice(0)
+    this.branchTitles.splice(0)
+    this.extractedPackageFiles = undefined
+    this.packageFilesWithUpdates = undefined
+    const logFile = path.join(this.projectDir, this.env.LOG_FILE)
+    await fs.rm(logFile, { force: true })
+
     const handlers = this.preExecuteOnce.splice(0)
     for (const fn of handlers) {
       await fn()
@@ -152,21 +173,66 @@ export class RenovateRun {
       throw cause
     })
 
+    await this.readLogFile(logFile)
+
     if (exitCode !== 0 || this.parseErrors.length > 0) {
       throw this.failedRunError(exitCode)
     }
   }
 
-  private onStdout(chunk: Buffer) {
-    for (const output of chunk
-      .toString()
-      .split("\n")
-      .filter((line) => line.trim() !== "")) {
-      try {
-        this.logEntries.push(JSON.parse(output))
-      } catch (cause) {
-        this.parseErrors.push(`Failed to parse log line:\n${output}\n${cause}`)
+  private onStdout(_chunk: Buffer) {
+    // Renovate writes human-readable logs to stdout for debugging failed tests.
+    // Structured assertions use the JSON log file parsed in readLogFile().
+  }
+
+  private async readLogFile(logFile: string): Promise<void> {
+    const output = await fs.readFile(logFile, "utf-8").catch((cause: NodeJS.ErrnoException) => {
+      if (cause.code === "ENOENT") {
+        return ""
       }
+      throw cause
+    })
+
+    for (const line of output.split("\n")) {
+      if (line.trim() === "") {
+        continue
+      }
+
+      try {
+        const entry = JSON.parse(line)
+        if (!isRenovateLogEntry(entry)) {
+          this.parseErrors.push(`Failed to parse log line as a Renovate log entry:\n${line}`)
+        } else {
+          this.processLogEntry(entry)
+        }
+      } catch (cause) {
+        this.parseErrors.push(`Failed to parse log line:\n${line}\n${cause}`)
+      }
+    }
+  }
+
+  private processLogEntry(entry: RenovateLogEntry): void {
+    const branchTitle = branchTitleFromLogEntry(entry)
+    if (branchTitle !== null) {
+      this.branchTitles.push(branchTitle)
+      this.logEntries.push(entry)
+      return
+    }
+
+    if (isExtractedPackageFilesLogEntry(entry)) {
+      this.extractedPackageFiles = entry.packageFiles
+      this.logEntries.push(entry)
+      return
+    }
+
+    if (isUpdatesLogEntry(entry)) {
+      this.packageFilesWithUpdates = entry.config
+      this.logEntries.push(entry)
+      return
+    }
+
+    if (isErrorSummaryLogEntry(entry)) {
+      this.logEntries.push(entry)
     }
   }
 
@@ -275,9 +341,15 @@ interface UpdatesRenovateLogEntry extends BaseRenovateLogEntry {
   config: Record<string, PackageFileWithUpdates[]>
 }
 
-interface BranchesInfoRenovateLogEntry extends BaseRenovateLogEntry {
-  msg: "branches info extended"
-  branchesInformation: BranchConfig[]
+interface BranchTitle {
+  branch: string
+  prTitle: string
+}
+
+interface PlannedBranch {
+  branchName: string
+  prTitle: string
+  upgrades: LookedUpDependency[]
 }
 
 type RenovateLogEntry =
@@ -285,7 +357,42 @@ type RenovateLogEntry =
   | ErrorSummaryRenovateLogEntry
   | PackageFilesRenovateLogEntry
   | UpdatesRenovateLogEntry
-  | BranchesInfoRenovateLogEntry
+
+function isRenovateLogEntry(value: unknown): value is RenovateLogEntry {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "level" in value &&
+    typeof value.level === "number" &&
+    "msg" in value &&
+    typeof value.msg === "string" &&
+    "time" in value &&
+    typeof value.time === "string"
+  )
+}
+
+function isExtractedPackageFilesLogEntry(
+  entry: RenovateLogEntry,
+): entry is PackageFilesRenovateLogEntry {
+  return "packageFiles" in entry
+}
+
+function isUpdatesLogEntry(entry: RenovateLogEntry): entry is UpdatesRenovateLogEntry {
+  return entry.msg === "packageFiles with updates" && "config" in entry
+}
+
+function isErrorSummaryLogEntry(entry: RenovateLogEntry): entry is ErrorSummaryRenovateLogEntry {
+  return "loggerErrors" in entry
+}
+
+function branchTitleFromLogEntry(entry: RenovateLogEntry): BranchTitle | null {
+  if (!("branch" in entry) || typeof entry.branch !== "string") {
+    return null
+  }
+
+  const match = /^prTitle: "([^"]*)"$/.exec(entry.msg)
+  return match === null ? null : { branch: entry.branch, prTitle: match[1]! }
+}
 
 function buildList(items: string[]): string {
   if (items.length === 1) {
