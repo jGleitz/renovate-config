@@ -96,6 +96,7 @@ export class RenovateRun {
       .filter((line) => line.trim() !== "")) {
       try {
         this.logEntries.push(JSON.parse(output))
+        // Redirecting to `console` so vitest can intercept the output:
         console.log(output)
       } catch (cause) {
         this.parseErrors.push(`Failed to parse log line:\n${output}\n${cause}`)
@@ -107,6 +108,7 @@ export class RenovateRun {
     const output = chunk.toString()
     if (!RenovateRun.stderrCanBeIgnored(output)) {
       this.errorOutput += output
+      // Redirecting to `console` so vitest can intercept the output:
       console.error(output)
     }
   }
