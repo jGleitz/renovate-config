@@ -7,6 +7,7 @@ export default defineConfig({
     isolate: false,
     pool: "threads",
     testTimeout: 30_000,
-    slowTestThreshold: 5_000,
+    slowTestThreshold: 8_000,
+    silent: "passed-only",
   },
 })
