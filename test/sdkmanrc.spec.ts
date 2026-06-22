@@ -1,9 +1,9 @@
 import { describe, expect } from "vitest"
-import { renovateTest } from "./renovateTest.js"
+import { renovateTest as test } from "./renovateTest.js"
 import fs from "node:fs/promises"
 
 describe(".sdkmanrc files", () => {
-  renovateTest("detects the Java version and finds updates for it", async ({ renovate }) => {
+  test("detects the Java version and finds updates for it", async ({ renovate }) => {
     await fs.cp("test/fixtures/sdkmanrc", renovate.projectDir, { recursive: true })
 
     const lookedUpDependencies = await renovate
