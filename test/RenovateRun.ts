@@ -4,23 +4,48 @@ import path from "node:path"
 import { pathToFileURL } from "node:url"
 import fs from "node:fs/promises"
 import type { PackageDependency, PackageFile } from "renovate/dist/modules/manager/types.js"
+import type { AllConfig } from "renovate/dist/config/types.js"
+import type { LogLevelRemap } from "renovate/dist/logger/types.js"
 
 const exec = promisify(childProcess.exec)
 
+type LogLevelString = LogLevelRemap["newLogLevel"]
+
 export class RenovateRun {
   private errorOutput: string = ""
+  /**
+   * Hooks that are called once at the next start of {@link #execute} after they
+   * are registered.
+   * @private
+   */
   private readonly preExecuteOnce: (() => Promise<void>)[] = []
-  private readonly args: string[] = ["--platform=local", '--host-rules=[{"enabled":false}]']
   private readonly env = {
-    LOG_LEVEL: "debug",
+    LOG_LEVEL: "debug" satisfies LogLevelString,
     LOG_FORMAT: "pretty",
     LOG_FILE: "renovate.log",
-    LOG_FILE_LEVEL: "debug",
+    LOG_FILE_LEVEL: "debug" satisfies LogLevelString,
     LOG_FILE_FORMAT: "json",
-    RENOVATE_CONFIG: JSON.stringify({
-      logLevelRemap: [{ matchMessage: "/^prTitle:/", newLogLevel: "debug" }],
-    }),
-    RENOVATE_PACKAGE_RULES: undefined as string | undefined,
+  }
+  /**
+   * Configuration for all renovate runs. The config passed to {@link #execute}
+   * will override these options.
+   * @private
+   */
+  private readonly config: AllConfig = {
+    platform: "local",
+    hostRules: [{
+      // No external host should be contacted. Tests should use #withCustomDatasource and #withDatasourceOverride to set up mock data sources.
+      enabled: false,
+    }],
+    logLevelRemap: [{
+      // The planned titles of PRs are only logged at the trace level and
+      // --plaform=local currently can’t do a --dry-run=full, which would give
+      // us the list of planned branches. Hence, we upgrade the log message to
+      // `debug` to see it. Activating trace logging increases test execution
+      // times by almost 3x.
+      matchMessage: "/^prTitle:/",
+      newLogLevel: "debug",
+    }],
   }
   private readonly parseErrors: string[] = []
   private readonly logEntries: RenovateLogEntry[] = []
@@ -38,40 +63,41 @@ export class RenovateRun {
       this.preExecuteOnce.push(async () => {
         await fs.writeFile(
           path.join(this.projectDir, `${name}-${encodeURIComponent(packageName)}-versions.txt`),
-          packageVersions.join("\n"),
+          JSON.stringify({
+            releases: packageVersions.map(version => ({
+              version,
+              releaseTimestamp: "2026-01-01T00:00:00Z",
+            })),
+          }, null, 2),
           "utf-8",
         )
       })
     }
-    const customDatasources = {
+    this.config.customDatasources = {
+      ...this.config.customDatasources,
       [name]: {
         defaultRegistryUrlTemplate: `${pathToFileURL(this.projectDir).href}/${name}-{{encodeURIComponent packageName}}-versions.txt`,
-        format: "plain",
-        transformTemplates: [
-          '{"releases": $map(releases, function($release) { {"version": $release.version, "releaseTimestamp": "2026-01-01T00:00:00Z"} })}',
-        ],
+        format: "json",
       },
     }
-    this.args.push(`--custom-datasources=${JSON.stringify(customDatasources)}`)
     return this
   }
 
   withDataSourceOverride(name: string, versions: Record<string, string[]>): this {
     this.withCustomDataSource(name, versions)
-    const existing = this.env.RENOVATE_PACKAGE_RULES
-      ? (JSON.parse(this.env.RENOVATE_PACKAGE_RULES) as unknown[])
-      : []
-    existing.push({
-      matchDatasources: [name],
-      overrideDatasource: `custom.${name}`,
-      registryUrls: [],
-    })
-    this.env.RENOVATE_PACKAGE_RULES = JSON.stringify(existing)
+    this.config.packageRules = [
+      ...(this.config.packageRules ?? []),
+      {
+        matchDatasources: [name],
+        overrideDatasource: `custom.${name}`,
+        registryUrls: [],
+      }
+    ]
     return this
   }
 
   async extract(): Promise<ExtractedDependency[]> {
-    await this.execute("--dry-run=extract")
+    await this.execute({ dryRun: "extract" })
     if (this.extractedPackageFiles === undefined) {
       throw new Error(this.withLogLines("Renovate did not print the extracted package files!"))
     }
@@ -79,7 +105,7 @@ export class RenovateRun {
   }
 
   async lookup(): Promise<LookedUpDependency[]> {
-    await this.execute("--dry-run=lookup")
+    await this.execute({ dryRun: "lookup" })
     return this.parseLookedUpDependencies()
   }
 
@@ -106,7 +132,7 @@ export class RenovateRun {
       }).catch((error: childProcess.ExecException & { stdout: string; stderr: string }) => {
         throw new Error(
           `Failed to initialize git repo (exit code ${error.code}):\n` +
-            `stdout: ${error.stdout}\nstderr: ${error.stderr}`,
+          `stdout: ${error.stdout}\nstderr: ${error.stderr}`,
         )
       })
     })
@@ -114,12 +140,12 @@ export class RenovateRun {
   }
 
   withSemanticCommits(): this {
-    this.args.push("--semantic-commits=enabled")
+    this.config.semanticCommits = "enabled"
     return this
   }
 
   async branches(): Promise<PlannedBranch[]> {
-    await this.execute("--dry-run=lookup")
+    await this.execute({ dryRun: "lookup" })
 
     const lookedUpDependencies = this.parseLookedUpDependencies()
     if (this.branchTitles.length === 0) {
@@ -135,7 +161,7 @@ export class RenovateRun {
     }))
   }
 
-  private async execute(...additionalArgs: string[]): Promise<void> {
+  private async execute(runConfig: AllConfig): Promise<void> {
     this.errorOutput = ""
     this.parseErrors.splice(0)
     this.logEntries.splice(0)
@@ -153,13 +179,17 @@ export class RenovateRun {
     const renovateIndexJs = path.join(process.cwd(), "node_modules", "renovate", "dist", "renovate")
     const renovateProcess = childProcess.spawn(
       this.nodeJsPath,
-      [renovateIndexJs, ...this.args, ...additionalArgs],
+      [renovateIndexJs],
       {
         stdio: ["ignore", "pipe", "pipe"],
         cwd: this.projectDir,
         env: {
           ...process.env,
           ...this.env,
+          RENOVATE_CONFIG: JSON.stringify({
+            ...this.config,
+            runConfig,
+          }),
         },
       },
     )
