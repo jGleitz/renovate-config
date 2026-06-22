@@ -15,8 +15,11 @@ export class RenovateRun {
     LOG_LEVEL: "debug",
     LOG_FORMAT: "pretty",
     LOG_FILE: "renovate.log",
-    LOG_FILE_LEVEL: "trace",
+    LOG_FILE_LEVEL: "debug",
     LOG_FILE_FORMAT: "json",
+    RENOVATE_CONFIG: JSON.stringify({
+      logLevelRemap: [{ matchMessage: "/^prTitle:/", newLogLevel: "debug" }],
+    }),
     RENOVATE_PACKAGE_RULES: undefined as string | undefined,
   }
   private readonly parseErrors: string[] = []
