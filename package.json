@@ -28,5 +28,5 @@
     "vitest": "5.0.0",
     "which": "7.0.0"
   },
-  "packageManager": "pnpm@12.3.4"
+  "packageManager": "pnpm@12.4.0"
 }
