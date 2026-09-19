@@ -176,8 +176,8 @@ importers:
         specifier: 3.9.7
         version: 3.9.7
       renovate:
-        specifier: 44.90.2
-        version: 44.90.2(supports-color@7.2.0)(typanion@3.14.0)
+        specifier: 44.94.0
+        version: 44.94.0(supports-color@7.2.0)(typanion@3.14.0)
       typescript:
         specifier: 7.0.2
         version: 7.0.2
@@ -1312,8 +1312,8 @@ packages:
     resolution: {integrity: sha512-ixNtAJndqh173VQ4KodSdJEI6nuioBWI0V1ITNKhZZsO0pEMoDxz539T4FTTbSZ/xIOSuDnzxLVRqBVSvPNE2g==}
     engines: {node: '>=18.0'}
 
-  cronstrue@3.24.0:
-    resolution: {integrity: sha512-t/Ji3Ur2c/pzhIAWNwC0ftl3JAE4dLfCjAdZoTZXmPDZwcispnS1PaMcMS4OmIIXyIVouAz+yw+mfQiE3hz5OQ==}
+  cronstrue@3.25.0:
+    resolution: {integrity: sha512-PAPaioNXHMLiUSM8V5sC0bIx5MALUQjjtuDZZWBir5Tau8D676Aoj3Oju/SCaggi4eLG+QPC3IU+dCo30AzDIA==}
     hasBin: true
 
   cross-spawn@7.0.6:
@@ -1749,8 +1749,8 @@ packages:
   humanize-ms@1.2.1:
     resolution: {integrity: sha512-Fl70vYtsAFb/C06PTS9dZBo7ihau+Tu/DNCk/OyHhea07S+aeMWpFFkUaXRa8fI+ScZbEI8dfSxwY7gxZ9SAVQ==}
 
-  ignore@7.0.8:
-    resolution: {integrity: sha512-YYNsSlXBjMk92SKnkwvB5LOVSa6OznlFUGcsvrFgNJbJCd0M1XKeFVRc8ZByeCqz32FivYNHJVooLmdqrmvp/Q==}
+  ignore@7.0.9:
+    resolution: {integrity: sha512-brTTsvFRt5C1gGHtPst/281UjPD5t9fBqbgoMPlVWy11ZLTPfu7HxK4ZYqO9H7o/yC9rSTCI85EaQ4OoY12qYw==}
     engines: {node: '>= 4'}
 
   import-in-the-middle@3.0.1:
@@ -2527,8 +2527,8 @@ packages:
   remark@15.0.1:
     resolution: {integrity: sha512-Eht5w30ruCXgFmxVUSlNWQ9iiimq07URKeFS3hNc8cUWy1llX4KDWfyEDZRycMc+znsN9Ux5/tJ/BFdgdOwA3A==}
 
-  renovate@44.90.2:
-    resolution: {integrity: sha512-8VzK8eIa5ZQFNqJBZ4pAvX+B02suSwBfIzdU0D9V0fCJGIpfvwbzA0bpWADXbMycfRmALNOxHCMvga8LeDm7vQ==}
+  renovate@44.94.0:
+    resolution: {integrity: sha512-WassjntU0CGJKTEEm+KvNz6p2IMuwB1rLXfrviuZ/FsueCj+7RWW5XxRGF9hQp6TLIBg6zSblcg9KRN8mMhyuw==}
     engines: {node: ^24.11.0, pnpm: ^11.0.0}
     hasBin: true
 
@@ -4265,7 +4265,7 @@ snapshots:
 
   croner@10.0.1: {}
 
-  cronstrue@3.24.0: {}
+  cronstrue@3.25.0: {}
 
   cross-spawn@7.0.6:
     dependencies:
@@ -4760,7 +4760,7 @@ snapshots:
     dependencies:
       ms: 2.1.3
 
-  ignore@7.0.8: {}
+  ignore@7.0.9: {}
 
   import-in-the-middle@3.0.1:
     dependencies:
@@ -5645,7 +5645,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  renovate@44.90.2(supports-color@7.2.0)(typanion@3.14.0):
+  renovate@44.94.0(supports-color@7.2.0)(typanion@3.14.0):
     dependencies:
       '@aws-sdk/client-codecommit': 3.1117.0
       '@aws-sdk/client-ec2': 3.1117.0
@@ -5700,7 +5700,7 @@ snapshots:
       commander: 15.0.0
       common-tags: 1.8.2
       croner: 10.0.1
-      cronstrue: 3.24.0
+      cronstrue: 3.25.0
       deepmerge: 4.3.1
       dequal: 2.0.3
       detect-indent: 7.0.2
@@ -5722,7 +5722,7 @@ snapshots:
       got: 16.0.0
       graph-data-structure: 4.5.0
       handlebars: 4.7.9
-      ignore: 7.0.8
+      ignore: 7.0.9
       ini: 6.0.0
       json-dup-key-validator: 1.0.3
       json-stringify-pretty-compact: 4.0.0
