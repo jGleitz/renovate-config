@@ -21,7 +21,7 @@
   "license": "MIT",
   "devDependencies": {
     "@types/which": "3.0.4",
-    "npm-run-all2": "9.0.3",
+    "npm-run-all2": "9.0.4",
     "prettier": "3.9.10",
     "renovate": "44.171.1",
     "typescript": "7.0.2",
