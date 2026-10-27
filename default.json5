@@ -39,6 +39,11 @@
       schedule: ["* 4-10 * * 5"],
     },
     {
+      // all artifacts of Atrium are released together with the same version
+      matchPackageNames: ["ch.tutteli.atrium:**"],
+      groupName: "Atrium",
+    },
+    {
       matchFileNames: ["gradle/testLibs.versions.toml"],
       semanticCommitType: "chore",
       semanticCommitScope: "test deps",
