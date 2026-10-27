@@ -1,0 +1,6 @@
+[versions]
+proxy-agent = "8.0.1"
+
+[libraries]
+puppeteer-browsers = "npm:@puppeteer/browsers:3.2.5"
+proxy-agent = { group = "npm", name = "proxy-agent", version.ref = "proxy-agent" }

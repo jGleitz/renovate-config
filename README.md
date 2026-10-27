@@ -25,6 +25,27 @@ The file name influences the semantic commit type and scope:
 
 The classification applies regardless of whether the available update is a patch, minor, or major update.
 
+### npm Packages
+
+Use the reserved `npm` group to declare npm packages in the same catalogs:
+
+```toml
+[versions]
+proxy-agent = "8.0.1"
+
+[libraries]
+puppeteer-browsers = "npm:@puppeteer/browsers:3.2.5"
+prettier = { module = "npm:prettier", version = "3.4.2" }
+proxy-agent = { group = "npm", name = "proxy-agent", version.ref = "proxy-agent" }
+```
+
+Renovate looks these packages up in the npm registry with npm versioning, dropping the `npm:` prefix
+for package lookups and update titles. Both scoped and unscoped package names are supported.
+The prefix remains in the catalog, and the catalog's production, test or build commit scope still
+applies. Other Maven dependencies are unaffected. A Gradle build consuming these entries must remove
+the reserved group before passing the package name and version to its npm dependency API; they are
+not Maven artefacts.
+
 ## Commands
 
 | Command             | Description                                     |

@@ -169,6 +169,9 @@ importers:
       '@types/which':
         specifier: 3.0.4
         version: 3.0.4
+      json5:
+        specifier: 2.2.3
+        version: 2.2.3
       npm-run-all2:
         specifier: 9.0.4
         version: 9.0.4

@@ -10,6 +10,16 @@
   },
   packageRules: [
     {
+      // Use the reserved npm group for npm packages in Gradle version catalogs.
+      matchManagers: ["gradle"],
+      matchPackageNames: ["/^npm:/"],
+      overrideDatasource: "npm",
+      overridePackageName: "{{{replace '^npm:' '' packageName}}}",
+      overrideDepName: "{{{replace '^npm:' '' depName}}}",
+      registryUrls: [],
+      versioning: "npm",
+    },
+    {
       // the engine requirement should match what is tested in CI. It shouldn’t be updated automatically.
       matchDepTypes: ["engines"],
       enabled: false,

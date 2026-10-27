@@ -3,6 +3,7 @@ import { promisify } from "node:util"
 import path from "node:path"
 import { pathToFileURL } from "node:url"
 import fs from "node:fs/promises"
+import JSON5 from "json5"
 import type { PackageDependency, PackageFile } from "renovate/dist/modules/manager/types.js"
 import type { AllConfig } from "renovate/dist/config/types.js"
 import type { LogLevelRemap } from "renovate/dist/logger/types.js"
@@ -101,14 +102,19 @@ export class RenovateRun {
 
   withDataSourceOverride(name: string, versions: Record<string, string[]>): this {
     this.withCustomDataSource(name, versions)
-    this.config.packageRules = [
-      ...(this.config.packageRules ?? []),
-      {
-        matchDatasources: [name],
-        overrideDatasource: `custom.${name}`,
-        registryUrls: [],
-      },
-    ]
+    const mockRule = {
+      matchDatasources: [name],
+      overrideDatasource: `custom.${name}`,
+      registryUrls: [],
+    }
+    this.config.packageRules = [...(this.config.packageRules ?? []), mockRule]
+    // Repository rules may select a datasource themselves. Reapply the mock after those rules, too.
+    this.preExecuteOnce.push(async () => {
+      const file = path.join(this.projectDir, "renovate.json5")
+      const config = JSON5.parse<AllConfig>(await fs.readFile(file, "utf-8"))
+      config.packageRules = [...(config.packageRules ?? []), mockRule]
+      await fs.writeFile(file, JSON.stringify(config, null, 2))
+    })
     return this
   }
 
