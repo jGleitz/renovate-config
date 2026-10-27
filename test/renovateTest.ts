@@ -30,9 +30,13 @@ export const renovateTest: TestAPI<RenovateTest> = test.extend<RenovateTestPriva
 
     try {
       await use(tmpDir)
-      expect(await fs.readFile(path.join(tmpDir, "renovate.json5"), "utf-8")).toBe(
-        await fs.readFile("default.json5", "utf-8"),
-      )
+
+      const configurationAfterTest = await fs.readFile(path.join(tmpDir, "renovate.json5"), "utf-8")
+      const originalConfiguration = await fs.readFile("default.json5", "utf-8")
+      expect(
+        configurationAfterTest,
+        "the configuration under test should not be modified for testing",
+      ).toBe(originalConfiguration)
     } finally {
       await fs.rm(tmpDir, { recursive: true, force: true })
     }
