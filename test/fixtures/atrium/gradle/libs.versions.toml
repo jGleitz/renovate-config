@@ -1,0 +1,9 @@
+[versions]
+atrium = "0.14.0"
+
+[libraries]
+atrium-core-api = { module = "ch.tutteli.atrium:atrium-core-api", version.ref = "atrium" }
+atrium-logic = { module = "ch.tutteli.atrium:atrium-logic", version.ref = "atrium" }
+atrium-fluent-en-gb = { module = "ch.tutteli.atrium:atrium-fluent-en_GB", version = "0.14.0" }
+atrium-specs = { module = "ch.tutteli.atrium:atrium-specs", version = "0.14.0" }
+jackson-databind = { module = "com.fasterxml.jackson.core:jackson-databind", version = "2.17.0" }
