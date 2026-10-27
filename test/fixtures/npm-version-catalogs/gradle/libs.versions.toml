@@ -1,0 +1,3 @@
+[libraries]
+prettier = "npm:prettier:3.4.2"
+unrelated = "com.example.npm:helper:1.0.0"

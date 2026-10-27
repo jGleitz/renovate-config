@@ -10,20 +10,46 @@ repositories.
 
 ## Gradle Version Catalogs
 
-In Gradle projects, the scope of a dependency cannot be determined automatically from a dependency catalog.
-This configuration supports different version catalog files to sort dependencies into production, test, and build dependencies.
+In Gradle projects, the scope of a dependency cannot be determined automatically from a dependency
+catalog.
+This configuration supports different version catalog files to sort dependencies into production,
+test, and build dependencies.
 The file name influences the semantic commit type and scope:
 
-- Dependencies declared in `gradle/libs.versions.toml` are treated as production dependencies and use
+- Dependencies declared in `gradle/libs.versions.toml` are treated as production dependencies and
+  use
   `fix(deps):`.
 - Dependencies declared in `gradle/testLibs.versions.toml` are treated as test dependencies and use
   `chore(test deps):`.
-- Dependencies declared in `gradle/buildLibs.versions.toml` are treated as build dependencies and use
+- Dependencies declared in `gradle/buildLibs.versions.toml` are treated as build dependencies and
+  use
   `chore(build deps):`.
 - Dependencies declared directly in `settings.gradle.kts`, such as Gradle settings plugins, are also
   treated as build dependencies and use `chore(build deps):`.
 
-The classification applies regardless of whether the available update is a patch, minor, or major update.
+The classification applies regardless of whether the available update is a patch, minor, or major
+update.
+
+### npm Packages
+
+Use the reserved `npm` group to declare npm packages in these version catalogs:
+
+```toml
+[versions]
+proxy-agent = "8.0.1"
+
+[libraries]
+puppeteer-browsers = "npm:@puppeteer/browsers:3.2.5"
+prettier = { module = "npm:prettier", version = "3.4.2" }
+proxy-agent = { group = "npm", name = "proxy-agent", version.ref = "proxy-agent" }
+```
+
+Renovate looks these packages up in the npm registry with npm versioning, dropping the `npm:`
+prefix. Both scoped and unscoped package names are supported.
+The prefix remains in the catalog, and the catalog's production, test or build commit scope still
+applies. Other Maven dependencies are unaffected. A Gradle build consuming these entries must remove
+the reserved group before passing the package name and version to its npm dependency API; they are
+not Maven artefacts.
 
 ## Commands
 

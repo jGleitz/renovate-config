@@ -112,6 +112,12 @@ export class RenovateRun {
     return this
   }
 
+  withNpmRegistry(url: string): this {
+    this.config.npmrc = `registry=${url}`
+    this.config.hostRules = [...(this.config.hostRules ?? []), { matchHost: url, enabled: true }]
+    return this
+  }
+
   async extract(): Promise<ExtractedDependency[]> {
     const logEntries = await this.execute({ dryRun: "extract" })
 
