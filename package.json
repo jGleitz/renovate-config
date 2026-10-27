@@ -21,7 +21,6 @@
   "license": "MIT",
   "devDependencies": {
     "@types/which": "3.0.4",
-    "json5": "2.2.3",
     "npm-run-all2": "9.0.4",
     "prettier": "3.9.10",
     "renovate": "44.178.1",

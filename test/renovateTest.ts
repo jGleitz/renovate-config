@@ -1,4 +1,4 @@
-import { test, TestAPI } from "vitest"
+import { test, expect, TestAPI } from "vitest"
 import fs from "node:fs/promises"
 import which from "which"
 import { RenovateRun } from "./RenovateRun.js"
@@ -28,9 +28,14 @@ export const renovateTest: TestAPI<RenovateTest> = test.extend<RenovateTestPriva
     const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "renovate-test-"))
     await fs.cp("default.json5", path.join(tmpDir, "renovate.json5"))
 
-    await use(tmpDir)
-
-    await fs.rm(tmpDir, { recursive: true, force: true })
+    try {
+      await use(tmpDir)
+      expect(await fs.readFile(path.join(tmpDir, "renovate.json5"), "utf-8")).toBe(
+        await fs.readFile("default.json5", "utf-8"),
+      )
+    } finally {
+      await fs.rm(tmpDir, { recursive: true, force: true })
+    }
   },
 
   renovate: async ({ nodeJsPath, projectDir }, use) => {
