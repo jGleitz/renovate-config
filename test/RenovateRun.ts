@@ -8,6 +8,7 @@ import type { AllConfig } from "renovate/dist/config/types.js"
 import type { LogLevelRemap } from "renovate/dist/logger/types.js"
 import {
   branchTitleFromLogEntry,
+  isBranchesLogEntry,
   isErrorSummaryLogEntry,
   isExtractedPackageFilesLogEntry,
   isRenovateLogEntry,
@@ -59,6 +60,11 @@ export class RenovateRun {
         // Hence, we upgrade the log message to `debug` to see it. Activating trace logging
         // increases test execution times by almost 3x.
         matchMessage: "/^prTitle:/",
+        newLogLevel: "debug",
+      },
+      {
+        // The configuration of the planned branches is likewise only logged at the trace level.
+        matchMessage: "/^branches$/",
         newLogLevel: "debug",
       },
     ],
@@ -167,10 +173,14 @@ export class RenovateRun {
     if (branchTitles.length === 0) {
       throw new Error("Renovate did not print planned PR titles!")
     }
+    const branchConfigs = logEntries.filter(isBranchesLogEntry).flatMap((entry) => entry.branches)
 
     return branchTitles.map(({ branchName, prTitle }) => ({
       branchName,
       prTitle,
+      skipArtifactsUpdate:
+        branchConfigs.find((branch) => branch.branchName === branchName)?.skipArtifactsUpdate ??
+        false,
       updates: lookedUpDependencies.flatMap((dependency) => {
         const updatesOnThisBranch = dependency.updates.filter(
           (update) => update.branchName === branchName,
@@ -366,6 +376,7 @@ interface LookedUpDependency
 interface PlannedBranch {
   branchName: string
   prTitle: string
+  skipArtifactsUpdate: boolean
   updates: LookedUpDependency[]
 }
 

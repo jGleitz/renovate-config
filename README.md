@@ -50,6 +50,8 @@ The prefix remains in the catalog, and the catalog's production, test or build c
 applies. Other Maven dependencies are unaffected. A Gradle build consuming these entries must remove
 the reserved group before passing the package name and version to its npm dependency API; they are
 not Maven artefacts.
+Because Gradle never resolves these entries, Renovate doesn't update Gradle lockfiles when it
+updates them.
 
 ## Commands
 

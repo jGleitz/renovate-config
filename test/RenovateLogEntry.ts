@@ -66,6 +66,20 @@ export function isUpdatesLogEntry(entry: RenovateLogEntry): entry is UpdatesReno
   )
 }
 
+interface PlannedBranchConfig {
+  branchName: string
+  skipArtifactsUpdate?: boolean
+}
+
+interface BranchesRenovateLogEntry extends RenovateLogEntry {
+  msg: "branches"
+  branches: PlannedBranchConfig[]
+}
+
+export function isBranchesLogEntry(entry: RenovateLogEntry): entry is BranchesRenovateLogEntry {
+  return entry.msg === "branches" && "branches" in entry && Array.isArray(entry.branches)
+}
+
 interface BranchTitle {
   branchName: string
   prTitle: string

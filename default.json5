@@ -18,6 +18,10 @@
       overrideDepName: "{{{replace '^npm:' '' depName}}}",
       registryUrls: [],
       versioning: "npm",
+      // Renovate would pass the name without the prefix to Gradle's --update-locks, which only
+      // accepts <group>:<artifact>. Gradle never resolves these packages, so they are in no
+      // Gradle lockfile and there is nothing to update.
+      skipArtifactsUpdate: true,
     },
     {
       // the engine requirement should match what is tested in CI. It shouldn’t be updated automatically.
