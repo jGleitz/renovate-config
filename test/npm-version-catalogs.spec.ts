@@ -116,4 +116,35 @@ describe("npm packages in Gradle version catalogs", () => {
       expect(branch!.prTitle).not.toContain("npm:")
     }
   })
+
+  test("skips artifact updates for npm packages, because Gradle can't update their locks", async ({
+    renovate,
+    npmRegistry,
+  }) => {
+    // Renovate passes the package name without the "npm:" prefix to Gradle's --update-locks,
+    // which only accepts <group>:<artifact>. Gradle never resolves these packages, so they are in
+    // no Gradle lockfile and there is nothing to update.
+    await fs.cp("test/fixtures/npm-version-catalogs", renovate.projectDir, { recursive: true })
+    const branches = await renovate
+      .withNpmRegistry(npmRegistry)
+      .withDataSourceOverride("maven", {
+        "org.junit.jupiter:junit-jupiter": ["5.11.0", "5.12.0"],
+        "com.example.npm:helper": ["1.0.0"],
+      })
+      .withGitRepository()
+      .branches()
+
+    for (const name of ["prettier", "@vitest/coverage-v8", "@puppeteer/browsers", "proxy-agent"]) {
+      const branch = branches.find((entry) =>
+        entry.updates.some((update) => update.depName === `npm:${name}`),
+      )
+      expect(branch, `missing branch for ${name}`).toMatchObject({ skipArtifactsUpdate: true })
+    }
+    const mavenBranch = branches.find((entry) =>
+      entry.updates.some((update) => update.depName === "org.junit.jupiter:junit-jupiter"),
+    )
+    expect(mavenBranch, "missing branch for junit-jupiter").toMatchObject({
+      skipArtifactsUpdate: false,
+    })
+  })
 })
